@@ -31,8 +31,8 @@ graph Synth [[ main ]]
         // Plumb the voice allocator to the voices array
         voiceAllocator.voiceEventOut -> voices.eventIn;
 
-        horizontal -> voices.myInput1;
-        vertical   -> voices.myInput2;
+        horizontal -> voices.input1;
+        vertical   -> voices.input2;
 
         // Sum the voices audio out to the output
         voices -> std::levels::ConstantGain (float, 0.1f) -> out;
@@ -46,8 +46,8 @@ graph Voice
     
     input event
     {
-        float myInput1;
-        float myInput2;
+        float input1;
+        float input2;
     } 
 
     node
@@ -63,8 +63,8 @@ graph Voice
         eventIn -> noteToFrequency -> phasor.frequencyIn;
         eventIn -> envelope.eventIn;
 
-        myInput1 -> phaseshaper.horizontal;
-        myInput2 -> phaseshaper.vertical;
+        input1 -> phaseshaper.horizontal;
+        input2 -> phaseshaper.vertical;
 
         phasor  -> phaseshaper.in;
         (envelope.gainOut * phaseshaper.out) -> out;
