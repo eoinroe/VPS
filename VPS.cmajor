@@ -4,6 +4,8 @@
     https://cmajor.dev
 */
 
+/*
+
 // Here's a very simple graph that plays a sine-wave to get you started..
 graph Graph  [[ main ]]
 {
@@ -23,15 +25,12 @@ graph Graph  [[ main ]]
     connection oscillator -> std::levels::ConstantGain (float, 0.1f) -> out;
 }
 
-/*
+*/
 
 graph Synth [[ main ]]
 {
     input event std::midi::Message midiIn;
     output stream float out;
-
-    // input phaseshaper.horizontal;
-    // input phaseshaper.vertical;
 
     let voiceCount = 8;
 
@@ -50,7 +49,7 @@ graph Synth [[ main ]]
         voiceAllocator.voiceEventOut -> voices.eventIn;
 
         // Sum the voices audio out to the output
-        voices -> out;
+        voices -> std::levels::ConstantGain (float, 0.1f) -> out;
     }
 }
 
@@ -58,6 +57,15 @@ graph Voice
 {
     input event (std::notes::NoteOn, std::notes::NoteOff) eventIn;
     output stream float out;
+
+    input event
+    {
+        float horizontal [[ name: "Horizontal",   min: 0, max: 1, init: 0.5, unit: ""]];
+        float vertical   [[ name: "Vertical",     min: 0, max: 5, init: 0.5, unit: ""]];
+    }
+
+    // event horizontal (float d)            { p.d = d; }
+    // event vertical   (float v)            { p.v = v; }
 
     node
     {
@@ -88,8 +96,6 @@ processor NoteToFrequency
     }
 }
 
-*/
-
 namespace vps 
 {
     struct InflectionPoint { float d, v; }
@@ -108,17 +114,10 @@ namespace vps
         input  stream float in;
         output stream float out;
 
-        input event
-        {
-            float horizontal [[ name: "Horizontal",   min: 0, max: 1, init: 0.5, unit: ""]];
-            float vertical   [[ name: "Vertical",     min: 0, max: 5, init: 0.5, unit: ""]];
-        }
+        var p = InflectionPoint(0.5f, 0.5f);
 
-        event horizontal (float d)            { p.d = d; }
-        event vertical   (float v)            { p.v = v; }
-
-        // (0, 0) also produces a sinewave.
-        InflectionPoint p;
+        // (0, 0) also produces a sinewave - but initializing the inflection point causes the audio driver to crash!
+        // let p = InflectionPoint(0.0f, 0.0f);
 
         void main()
         {
