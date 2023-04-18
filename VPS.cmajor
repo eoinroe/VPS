@@ -4,33 +4,16 @@
     https://cmajor.dev
 */
 
-/*
-
-// Here's a very simple graph that plays a sine-wave to get you started..
-graph Graph  [[ main ]]
-{
-    input oscillator.horizontal;
-    input oscillator.vertical;
-
-    // Our processor has a single floating point output stream:
-    output stream float out;
-
-    // we'll create a sinewave generator node, using the standard library:
-    node phasor = std::oscillators::Phasor (float, 440);
-    node oscillator = vps::Processor;
-
-    // and we'll connect the sinewave to our output stream via a fixed
-    // gain processor, which will reduce its level to be less annoying:
-    connection phasor -> oscillator.in;
-    connection oscillator -> std::levels::ConstantGain (float, 0.1f) -> out;
-}
-
-*/
-
 graph Synth [[ main ]]
 {
     input event std::midi::Message midiIn;
     output stream float out;
+
+    input event
+    {
+        float horizontal [[ name: "Horizontal",   min: 0, max: 1, init: 0.5, unit: ""]];
+        float vertical   [[ name: "Vertical",     min: 0, max: 5, init: 0.5, unit: ""]];
+    }
 
     let voiceCount = 8;
 
@@ -48,6 +31,9 @@ graph Synth [[ main ]]
         // Plumb the voice allocator to the voices array
         voiceAllocator.voiceEventOut -> voices.eventIn;
 
+        horizontal -> voices.myInput1;
+        vertical   -> voices.myInput2;
+
         // Sum the voices audio out to the output
         voices -> std::levels::ConstantGain (float, 0.1f) -> out;
     }
@@ -57,15 +43,12 @@ graph Voice
 {
     input event (std::notes::NoteOn, std::notes::NoteOff) eventIn;
     output stream float out;
-
+    
     input event
     {
-        float horizontal [[ name: "Horizontal",   min: 0, max: 1, init: 0.5, unit: ""]];
-        float vertical   [[ name: "Vertical",     min: 0, max: 5, init: 0.5, unit: ""]];
-    }
-
-    // event horizontal (float d)            { p.d = d; }
-    // event vertical   (float v)            { p.v = v; }
+        float myInput1;
+        float myInput2;
+    } 
 
     node
     {
@@ -79,6 +62,10 @@ graph Voice
     {
         eventIn -> noteToFrequency -> phasor.frequencyIn;
         eventIn -> envelope.eventIn;
+
+        myInput1 -> phaseshaper.horizontal;
+        myInput2 -> phaseshaper.vertical;
+
         phasor  -> phaseshaper.in;
         (envelope.gainOut * phaseshaper.out) -> out;
     }
@@ -114,10 +101,20 @@ namespace vps
         input  stream float in;
         output stream float out;
 
+        input event
+        {
+            float horizontal;
+            float vertical;
+        }
+
+        // Sinusoid
         var p = InflectionPoint(0.5f, 0.5f);
 
-        // (0, 0) also produces a sinewave - but initializing the inflection point causes the audio driver to crash!
+        // (0, 0) also produces a sinewave - but initializing the inflection point this way causes the audio driver to crash!
         // let p = InflectionPoint(0.0f, 0.0f);
+
+        event horizontal (float d)            { p.d = d; }
+        event vertical   (float v)            { p.v = v; }
 
         void main()
         {
