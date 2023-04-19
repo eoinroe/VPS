@@ -9,17 +9,27 @@ graph Synth [[ main ]]
     /* Epsilon added to the minimum value for v in order to avoid clipping on transition
        (this occurs since both vertical and horizontal domains of the inflection vector
         are symmetric around 0.5.) */
+    // input event
+    // {
+    //     float horizontal [[ name: "Horizontal",   min: 0,       max: 1, init: initialHorizontalValue, unit: ""]];
+    //     float vertical   [[ name: "Vertical",     min: 0.50001, max: 1, init: initialVerticalValue  , unit: ""]];
+    // }
+
     input event
     {
-        float horizontal [[ name: "Horizontal",   min: 0,       max: 1, init: initialHorizontalValue, unit: ""]];
-        float vertical   [[ name: "Vertical",     min: 0.50001, max: 1, init: initialVerticalValue  , unit: ""]];
+        float horizontal [[ name: "Horizontal",   min: 0, max: 1, init: initialHorizontalValue, unit: ""]];
+        float vertical   [[ name: "Vertical",     min: 0, max: 3, init: initialVerticalValue  , unit: ""]];
     }
 
-    input event bool antiAliasing [[ name: "Anti-Aliasing", init: true, text: "off|on", boolean ]];
+    input event bool antiAliasing [[ name: "Anti-Aliasing", init: false, text: "off|on", boolean ]];
 
     let voiceCount = 8;
-    const float initialHorizontalValue = 0.5f;
-    const float initialVerticalValue   = 0.75f;
+    
+    // const float initialHorizontalValue = 0.5f;
+    // const float initialVerticalValue   = 0.75f;
+
+    const float initialHorizontalValue = 0.8f;
+    const float initialVerticalValue   = 2.2f;
 
     node
     {
@@ -131,11 +141,6 @@ namespace vps
         else if (b > 0.5f || modifiedPhaseshaper > 0.5f) {
             out = (((1.0f + c) * out) + 1.0f - c) / 2.0f;
         }
-
-        // Does the comma in a piecewise function mean || or && ?
-        // else if (b > 0.5f && modifiedPhaseshaper > 0.5f) {
-        //     out = (((1.0f + c) * out) + 1.0f - c) / 2.0f;
-        // }
     }
 
     processor Processor
@@ -152,8 +157,12 @@ namespace vps
         input event bool useAntiAliasing;
 
         // Sinusoid
-        var p = InflectionPoint(0.5f, 0.5f);
-        bool antiAliasing = true;
+        // var p = InflectionPoint(0.5f, 0.5f);
+        // bool antiAliasing = true;
+
+        // Trivial VPS timbre.
+        var p = InflectionPoint(0.8f, 2.2f);
+        bool antiAliasing = false;
 
         // (0, 0) also produces a sinewave - but initializing the inflection point this way causes the audio driver to crash!
         // let p = InflectionPoint(0.0f, 0.0f);
@@ -171,15 +180,13 @@ namespace vps
                 float vps = twoDimensionalPhaseDistortion(in, p);    // A phaseshaper acting on an input signal.
                 float signal = -cos(float(twoPi * vps));
 
-                // TODO: Use spectrum analyzer to check anti-aliasing is 100% correct.
                 if (antiAliasing) {
                     // The aliasing produced by the incomplete periods may also be suppressed
                     // by exploiting a novel single oscillator algorithm, which modifies the
                     // phaseshaper when φvps[φ(n)] > floor(v), i.e. when the phase is inside
                     // the incomplete period.
-                    if (vps > floor(p.v)) {
-                        aliasingSuppression(vps, signal, p.v);
-                    }
+                    aliasingSuppression(vps, signal, p.v);
+                    
                 }
 
                 out <- signal;
